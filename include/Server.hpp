@@ -17,12 +17,22 @@
 #include <string>
 #include <algorithm>
 #include "Client.hpp"
+#include <stdexcept>
 
 class Server
 {
 	private:
+		int _sock_fd;
+		int _port;
+		std::string _password;
+
+		void createSocket();
+		void bindAndListen();
 
 	public:
+		Server(int port, const std::string &password);
+		~Server();
+		void run();
 };
 
 #endif
