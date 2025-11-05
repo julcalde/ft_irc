@@ -1,8 +1,14 @@
 #include "../../include/Server.hpp"
+#include <iostream>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <unistd.h>
 #include <fcntl.h>
 #include <poll.h>
-#include <vector>
 #include <iomanip>
+#include <vector>
+
 
 Server::Server(int port, const std::string &password) : _sock_fd(-1), _port(port), _password(password)
 {
@@ -14,6 +20,8 @@ Server::~Server()
 {
 	if (_sock_fd != -1)
 		close(_sock_fd);
+	for (std::map<int, Client>::iterator iter = _clients.begin(); iter != _clients.end(); ++iter)
+		close(iter->first);
 }
 
 void Server::createSocket()
@@ -46,7 +54,6 @@ void Server::run()
 	std::vector<struct pollfd> fds(1);
 	fds[0].fd = _sock_fd;
 	fds[0].events = POLLIN;
-	std::string buffer; // Data-Storage per client
 
 	while (true) // Main server loop
 	{
@@ -63,12 +70,11 @@ void Server::run()
 					struct sockaddr_in addr; // Client address structure
 					socklen_t len = sizeof(addr);
 					int client_fd = accept(_sock_fd, (struct sockaddr*)&addr, &len);
-
+					std::cout << "Client connected, fd=" << client_fd << std::endl;
 					fcntl(client_fd, F_SETFL, O_NONBLOCK); // Set client socket to non-blocking
 					struct pollfd pfd = {client_fd, POLLIN, 0}; // Prepare pollfd for new client
 					fds.push_back(pfd); // Add new client to poll fds
-
-					_clients[client_fd] = Client(); // Initialize client data
+					_clients[client_fd] = Client(); // Initialize new client data
 				}
 				/* Recv from client */
 				else
@@ -77,36 +83,58 @@ void Server::run()
 					ssize_t bytes = recv(fds[i].fd, buf, sizeof(buf) - 1, 0); // Receive data
 					if (bytes <= 0) // Close connection on error or disconnect
 					{
+						std::cout << "Client fd=" << fds[i].fd << " disconnected" << std::endl;
 						close(fds[i].fd);
+						_clients.erase(fds[i].fd);
 						fds.erase(fds.begin() + i);
 						--i;
 						continue ;
 					}
 					buf[bytes] = '\0'; // Null-terminate the received data
-					buffer += buf; // Append to buffer
+					_clients[fds[i].fd].buffer += buf; // Append to buffer
 
 					/* Loop to process complete commands */
 					size_t pos;
 
-					while ((pos = buffer.find('\n')) != std::string::npos)
+					while ((pos = _clients[fds[i].fd].buffer.find('\n')) != std::string::npos)
 					{
-						std::string cmd = buffer.substr(0, pos);
+						std::string cmd = _clients[fds[i].fd].buffer.substr(0, pos);
 						if (!cmd.empty() && cmd[cmd.size() - 1] == '\r')
 							cmd.erase(cmd.size() - 1); // Remove trailing \r if present
-						buffer.erase(0, pos + 1); // Remove processed command from buffer
+						_clients[fds[i].fd].buffer.erase(0, pos + 1); // Remove processed command from buffer
 						if (cmd.empty()) // Skip empty commands
 							continue ;
 
 						// PING cmd sends PONG back to client or echoes the command
 						std::string resp;
-						if (cmd == "PING")
-							resp = "PONG\r\n";
+
+						if (cmd.find("PASS ") == 0)
+						{
+							std::string pass = cmd.substr(5);
+							if (pass == _password)
+							{
+								_clients[fds[i].fd].authenticated = true;
+								resp = ":server 001 nick :Welcome to the IRC server\r\n";
+							}
+							else
+								resp = ":server 464 :Password incorrect\r\n";
+						}
+						else if (_clients[fds[i].fd].authenticated)
+						{
+							if (cmd == "PING")
+								resp = "PONG\r\n";
+							else if (!cmd.empty())
+								resp = cmd + "\r\n";
+						}
 						else
-							resp = cmd + "\r\n";
-						if (send(fds[i].fd, resp.c_str(), resp.size(), 0) < 0)
-							std::cout << "Send failed: " << strerror(errno) << "\n" << std::endl;
-						else
-							std::cout << "Sent = " << resp << std::endl;
+							resp = ":server 464 : Authenticate first\r\n";
+						if (!resp.empty())
+						{
+							if (send(fds[i].fd, resp.c_str(), resp.size(), 0) < 0)
+								std::cout << "Send failed: " << strerror(errno) << "\n" << std::endl;
+							else
+								std::cout << "Sent to FD " << fds[i].fd << " = " << resp;
+						}
 					}
 				}
 			}
