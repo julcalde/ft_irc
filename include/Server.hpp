@@ -22,9 +22,18 @@
 class Server
 {
 	private:
+		struct Client
+		{
+			std::string buffer;
+			bool authenticated;
+			Client() : authenticated(false) {} // Sets authenticated to false by default
+		};
+		
 		int _sock_fd;
 		int _port;
 		std::string _password;
+		std::map<int, Client> _clients; // Map of client FDs to Client data
+
 
 		void createSocket();
 		void bindAndListen();
@@ -33,16 +42,6 @@ class Server
 		Server(int port, const std::string &password);
 		~Server();
 		void run();
-
-	struct Client
-	{
-		std::string buffer;
-		bool authenticated;
-		Client() : authenticated(false) {} // Sets authenticated to false by default
-	};
-
-	private:
-		std::map<int, Client> _clients; // Map of client FDs to Client data
 };
 
 #endif
