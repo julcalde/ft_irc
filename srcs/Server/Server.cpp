@@ -1,14 +1,4 @@
 #include "../../include/Server.hpp"
-#include <iostream>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <poll.h>
-#include <iomanip>
-#include <vector>
-
 
 Server::Server(int port, const std::string &password) : _sock_fd(-1), _port(port), _password(password)
 {

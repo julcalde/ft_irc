@@ -1,23 +1,25 @@
 #ifndef SERVER_HPP
 # define SERVER_HPP
 
-#include <poll.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#include <netdb.h>
+#include "Client.hpp"
+#include <vector>
 #include <unistd.h>
-#include <signal.h>
+#include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/socket.h>
+#include <string>
+#include <stdexcept>
+#include <signal.h>
+#include <poll.h>
+#include <netinet/in.h>
+#include <netdb.h>
+#include <map>
+#include <iostream>
+#include <iomanip>
 #include <fcntl.h>
 #include <cstring>
-#include <iostream>
-#include <map>
-#include <vector>
-#include <string>
 #include <algorithm>
-#include "Client.hpp"
-#include <stdexcept>
+#include <arpa/inet.h>
 
 class Server
 {
