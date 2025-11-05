@@ -3,12 +3,6 @@
 
 #include "Server.hpp"
 
-class Client
-{
-	private:
 
-	public:
-	
-};
 
 #endif
