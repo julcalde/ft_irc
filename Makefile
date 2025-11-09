@@ -31,7 +31,7 @@ NC			:= \033[0m
 #################################################################################################
 
 COMPILER	=	c++
-INCLUDES	=	-I includes
+INCLUDES	=	-Iinclude
 CFLAGS		=	-std=c++98 -g -Wall -Wextra -Werror -fsanitize=address
 ERROR_FILE	=	error.log
 
@@ -43,12 +43,12 @@ _SERVER			=	Server.cpp
 SERVER			=	$(addprefix Server/, $(_SERVER))
 
 _CLIENT			=	Client.cpp
-CLIENT			=	$(addprefix Client/, $(_Client))
+CLIENT			=	$(addprefix Client/, $(_CLIENT))
 
 _SRCS			=	main.cpp $(CLIENT) $(SERVER)
 SRCS			=	$(addprefix srcs/, $(_SRCS))
 
-OBJS			=	$(SRCS:%.c=bin/%.o)
+OBJS			=	$(SRCS:srcs/%.cpp=bin/%.o)
 
 #################################################################################################
 #											Rules												#
@@ -61,7 +61,7 @@ bin:
 				@mkdir -p bin/Server
 				@mkdir -p bin/Client
 
-bin/%.o:		srcs/%.c | bin
+bin/%.o:		srcs/%.cpp | bin
 				@echo "$(GREEN) Compiling $(Compiler) $(CLR_RMV) -c -o $(YELLOW) $@ $(CYAN) $^ $(GREEN) $(CFLAGS) $(GREEN) $(NC)"
 				@$(COMPILER) -c -o $@ $^ $(EXTRA_FLAGS) $(CFLAGS) $(INCLUDES) 2> $(ERROR_FILE) || (cat $(ERROR_FILE) && echo "$(RED)Compilation failed :0\nfailed file: \t\t$(YELLOW)$<$(NC)\n\n" && exit 1$(NC))
 
