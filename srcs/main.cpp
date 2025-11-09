@@ -1,4 +1,16 @@
-#include "../include/Server.hpp"
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   main.cpp                                           :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: bszikora <bszikora@student.42helbronn.d    +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2025/11/09 01:29:33 by bszikora          #+#    #+#             */
+/*   Updated: 2025/11/09 02:42:31 by bszikora         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
+#include "Server.hpp" // if you see this line in red, ignore it. It compiles.
 
 int main(int argc, char **argv)
 {

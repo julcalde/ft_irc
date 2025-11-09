@@ -1,4 +1,16 @@
-#include "../../include/Server.hpp"
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   Server.cpp                                         :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: bszikora <bszikora@student.42helbronn.d    +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2025/11/09 01:29:20 by bszikora          #+#    #+#             */
+/*   Updated: 2025/11/09 02:56:02 by bszikora         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
+#include "Server.hpp"
 
 Server::Server(int port, const std::string &password) : _sock_fd(-1), _port(port), _password(password)
 {
@@ -11,7 +23,7 @@ Server::~Server()
 	if (_sock_fd != -1)
 		close(_sock_fd);
 	for (std::map<int, Client>::iterator iter = _clients.begin(); iter != _clients.end(); ++iter)
-		close(iter->first);
+		iter->second.disconnect();
 }
 
 void Server::createSocket()
@@ -64,70 +76,91 @@ void Server::run()
 					fcntl(client_fd, F_SETFL, O_NONBLOCK); // Set client socket to non-blocking
 					struct pollfd pfd = {client_fd, POLLIN, 0}; // Prepare pollfd for new client
 					fds.push_back(pfd); // Add new client to poll fds
-					_clients[client_fd] = Client(); // Initialize new client data
+					_clients[client_fd] = Client(client_fd); // Initialize new client data with fd
 				}
 				/* Recv from client */
 				else
 				{
-					char buf[1024];
-					ssize_t bytes = recv(fds[i].fd, buf, sizeof(buf) - 1, 0); // Receive data
-					if (bytes <= 0) // Close connection on error or disconnect
+					Client &cli = _clients[fds[i].fd];
+					int bytes = cli.receive();
+					if (bytes <= 0 && !cli.isConnected())
 					{
 						std::cout << "Client fd=" << fds[i].fd << " disconnected" << std::endl;
-						close(fds[i].fd);
+						cli.disconnect();
 						_clients.erase(fds[i].fd);
 						fds.erase(fds.begin() + i);
 						--i;
-						continue ;
+						continue;
 					}
-					buf[bytes] = '\0'; // Null-terminate the received data
-					_clients[fds[i].fd].buffer += buf; // Append to buffer
 
 					/* Loop to process complete commands */
-					size_t pos;
-
-					while ((pos = _clients[fds[i].fd].buffer.find('\n')) != std::string::npos)
+					std::string cmd;
+					while (cli.extractNextCommand(cmd))
 					{
-						std::string cmd = _clients[fds[i].fd].buffer.substr(0, pos);
-						if (!cmd.empty() && cmd[cmd.size() - 1] == '\r')
-							cmd.erase(cmd.size() - 1); // Remove trailing \r if present
-						_clients[fds[i].fd].buffer.erase(0, pos + 1); // Remove processed command from buffer
-						if (cmd.empty()) // Skip empty commands
-							continue ;
-
-						// PING cmd sends PONG back to client or echoes the command
+						if (cmd.empty())
+							continue;
 						std::string resp;
-
 						if (cmd.find("PASS ") == 0)
 						{
 							std::string pass = cmd.substr(5);
 							if (pass == _password)
 							{
-								_clients[fds[i].fd].authenticated = true;
+								cli.setAuthenticated(true);
 								resp = ":server 001 nick :Welcome to the IRC server\r\n";
 							}
 							else
 								resp = ":server 464 :Password incorrect\r\n";
 						}
-						else if (_clients[fds[i].fd].authenticated)
+						else if (cli.isAuthenticated())
 						{
 							if (cmd == "PING")
 								resp = "PONG\r\n";
+							else if (cmd.find("NICK ") == 0)
+							{
+								std::string nick = cmd.substr(5);
+								cli.setNickname(nick);
+								resp = "OK NICK\r\n";
+							}
+							else if (cmd.find("USER ") == 0)
+							{
+								std::string user = cmd.substr(5);
+								cli.setUsername(user);
+								resp = "OK USER\r\n";
+							}
 							else if (!cmd.empty())
 								resp = cmd + "\r\n";
 						}
 						else
 							resp = ":server 464 : Authenticate first\r\n";
 						if (!resp.empty())
-						{
-							if (send(fds[i].fd, resp.c_str(), resp.size(), 0) < 0)
-								std::cout << "Send failed: " << strerror(errno) << "\n" << std::endl;
-							else
-								std::cout << "Sent to FD " << fds[i].fd << " = " << resp;
-						}
+							cli.queueResponse(resp);
 					}
 				}
 			}
+			if (fds[i].revents & POLLOUT)
+			{
+				if (fds[i].fd != _sock_fd)
+				{
+					Client &cli = _clients[fds[i].fd];
+					cli.flushSend();
+					if (!cli.isConnected())
+					{
+						std::cout << "Client fd=" << fds[i].fd << " disconnected during send" << std::endl;
+						_clients.erase(fds[i].fd);
+						fds.erase(fds.begin() + i);
+						--i;
+						continue;
+					}
+				}
+			}
+		}
+
+		// making sure POLLOUT is set only for clients that have pending data
+		for (size_t j = 1; j < fds.size(); ++j)
+		{
+			std::map<int, Client>::iterator it = _clients.find(fds[j].fd);
+			if (it == _clients.end()) continue;
+			fds[j].events = POLLIN | (it->second.hasDataToSend() ? POLLOUT : 0);
 		}
 	}
 }

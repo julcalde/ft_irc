@@ -1,3 +1,15 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   Server.hpp                                         :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: bszikora <bszikora@student.42helbronn.d    +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2025/11/09 01:28:50 by bszikora          #+#    #+#             */
+/*   Updated: 2025/11/09 01:28:52 by bszikora         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
 #ifndef SERVER_HPP
 # define SERVER_HPP
 
@@ -8,6 +20,7 @@
 #include <sys/stat.h>
 #include <sys/socket.h>
 #include <string>
+#include <cerrno>
 #include <stdexcept>
 #include <signal.h>
 #include <poll.h>
@@ -24,18 +37,10 @@
 class Server
 {
 	private:
-		struct Client
-		{
-			std::string buffer;
-			bool authenticated;
-			Client() : authenticated(false) {} // Sets authenticated to false by default
-		};
-		
 		int _sock_fd;
 		int _port;
 		std::string _password;
-		std::map<int, Client> _clients; // Map of client FDs to Client data
-
+		std::map<int, ::Client> _clients; // Map of client FDs to Client data
 
 		void createSocket();
 		void bindAndListen();
