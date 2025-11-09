@@ -100,7 +100,19 @@ void Server::run()
 						if (cmd.empty())
 							continue;
 						std::string resp;
-						if (cmd.find("PASS ") == 0)
+						if (cmd.find("OPASS ") ==  0)
+						{
+							std::string pass = cmd.substr(6);
+							if (pass == "im_op-"+_password)
+							{
+								cli.setAuthenticated(true);
+								cli.setOp(true);
+								resp = ":server 001 nick :Welcome to the IRC server as operator\r\n";
+							}
+							else
+								resp = ":server 464 :operator Password incorrect\r\n";
+						}
+						else if (cmd.find("PASS ") == 0)
 						{
 							std::string pass = cmd.substr(5);
 							if (pass == _password)
@@ -126,6 +138,17 @@ void Server::run()
 								std::string user = cmd.substr(5);
 								cli.setUsername(user);
 								resp = "OK USER\r\n";
+							}
+							else if (cmd.find("LIST_CMD ") == 0)
+								resp = "NICK | set nickname\nUSER | set username\nLIST_CMD | list commands\nLIST_USER | list users\r\n";
+							else if (cmd.find("LIST_USER ") == 0)
+							{
+								resp = "USER	|	NICK\n";
+								for (int i = 0; i < (int)_clients.size(); i++)
+								{
+									resp.append(_clients[i].username()+"	|	"+_clients[i].nickname()+"\n");
+								}
+								resp.append("\r\n");
 							}
 							else if (!cmd.empty())
 								resp = cmd + "\r\n";

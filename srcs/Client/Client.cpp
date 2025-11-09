@@ -17,15 +17,15 @@
 #include <cstring>
 
 Client::Client()
-: _clientFD(-1), _inBuffer(), _outBuffer(), _nickname(), _username(), _isAuthenticated(false), _isConnected(false)
+: _clientFD(-1), _inBuffer(), _outBuffer(), _nickname(), _username(), _isAuthenticated(false), _isConnected(false), _isOp(false)
 {}
 
 Client::Client(int fd)
-: _clientFD(fd), _inBuffer(), _outBuffer(), _nickname(), _username(), _isAuthenticated(false), _isConnected(true)
+: _clientFD(fd), _inBuffer(), _outBuffer(), _nickname(), _username(), _isAuthenticated(false), _isConnected(true), _isOp(false)
 {}
 
 Client::Client(const Client& other)
-: _clientFD(other._clientFD), _inBuffer(other._inBuffer), _outBuffer(other._outBuffer), _nickname(other._nickname), _username(other._username), _isAuthenticated(other._isAuthenticated), _isConnected(other._isConnected)
+: _clientFD(other._clientFD), _inBuffer(other._inBuffer), _outBuffer(other._outBuffer), _nickname(other._nickname), _username(other._username), _isAuthenticated(other._isAuthenticated), _isConnected(other._isConnected), _isOp(other._isOp)
 {}
 
 Client& Client::operator=(const Client& other)
@@ -47,6 +47,9 @@ Client::~Client() {}
 
 bool Client::isAuthenticated() const { return _isAuthenticated; }
 void Client::setAuthenticated(bool v) { _isAuthenticated = v; }
+
+bool Client::isOp() const {return _isOp; }
+void Client::setOp(bool v) { _isOp = v; }
 
 bool Client::isConnected() const { return _isConnected; }
 bool Client::hasDataToSend() const { return !_outBuffer.empty(); }

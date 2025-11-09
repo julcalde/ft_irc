@@ -31,6 +31,7 @@ private:
 	std::string _username;
     bool        _isAuthenticated;
     bool        _isConnected;
+	bool		_isOp;
 
 public:
     Client();
@@ -41,6 +42,8 @@ public:
 
     bool isAuthenticated() const;
     void setAuthenticated(bool v);
+	bool isOp() const;
+	void setOp(bool v);
 
     bool isConnected() const;
     void disconnect();
