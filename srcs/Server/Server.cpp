@@ -51,6 +51,15 @@ void Server::bindAndListen()
 	std::cout << "Listening on port " << _port << std::endl;
 }
 
+void	Server::createChannel(void)
+{
+	this->_channels[0] = Channel("#General", "idk basic channel ig");
+	this->_channels[1] = Channel("#Coffebreak", "Casual chat for developers, designers, and night owls");
+	this->_channels[2] = Channel("#retrocomputing", "Everything about old PCs, terminals, and vintage OSes");
+	this->_channels[3] = Channel("#Operator channel", "Channel only for operators");
+	this->_channels[4] = Channel("#zenmode", "A calm space for meditation, mindfulness, and philosophy talk");
+}
+
 void Server::run()
 {
 	std::vector<struct pollfd> fds(1);
@@ -140,13 +149,23 @@ void Server::run()
 								resp = "OK USER\r\n";
 							}
 							else if (cmd.find("LIST_CMD ") == 0)
-								resp = "NICK | set nickname\nUSER | set username\nLIST_CMD | list commands\nLIST_USER | list users\r\n";
+								resp = "NICK | set nickname\nUSER | set username\nLIST_CMD | list commands\nLIST_USER | list users\nLIST_CHANNELS | lists channels\r\n";
 							else if (cmd.find("LIST_USER ") == 0)
 							{
 								resp = "USER	|	NICK\n";
 								for (int i = 0; i < (int)_clients.size(); i++)
 								{
-									resp.append(_clients[i].username()+"	|	"+_clients[i].nickname()+"\n");
+									if (_clients[i].isConnected())
+										resp.append(_clients[i].username()+"	|	"+_clients[i].nickname()+"\n");
+								}
+								resp.append("\r\n");
+							}
+							else if (cmd.find("LIST_CHANNELS ") == 0)
+							{
+								resp = "NAME			|	TOPIC";
+								for (int i = 0; i < this->_channels.size(); i++)
+								{
+									resp.append(_channels[i].getName()+"	|	"+_channels[i].getTopic()+"\n");
 								}
 								resp.append("\r\n");
 							}
